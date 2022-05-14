@@ -56,13 +56,20 @@ double calc_dist(geometry_msgs::Point A,geometry_msgs::Point B){
     return reqAns;
 }
 
+//utility function for swapping
+void swap(double &a,double &b){
+   double x = a;
+   a = b;
+   b = x;
+}
+
 //calculate the start and end angle of a line segment
 //the angles are measured from the positive x-axis
 //the angles are in radians (from 0 to PI, 0 to -PI)
 std::vector<double>calc_ea_sa(geometry_msgs::Point f,geometry_msgs::Point s){
    double ea = atan2(s.y,s.x);
    double sa = atan2(f.y,s.x);
-   if(sa>=0 && ea>=0 && sa>ea){
+   if(sa>ea){//start angle will be smaller than end angle
       swap(sa,ea);
    }
    return std::vector<double>{ea,sa};
@@ -104,6 +111,9 @@ int main(int argc, char **argv)
       visualization_msgs::Marker line_list;
       visualization_msgs::Marker obs_list;
 
+      //for visualiising the size of the obstacle
+      //it will draw 2 line segments from the origin to the 2 end points of each obstacle 
+      //color of the lines are green
       line_list.header.frame_id = "map";
       line_list.header.stamp = ros::Time::now();
       line_list.ns = "points_and_lines";
@@ -115,7 +125,8 @@ int main(int argc, char **argv)
       line_list.color.g = 1.0;
       line_list.color.a = 1.0;
 
-
+      //for visualising the obstacle line segment
+      //it will draw a blue line fo represent an obstacle
       obs_list.header.frame_id = "map";
       obs_list.header.stamp = ros::Time::now();
       obs_list.ns = "points_and_lines";
