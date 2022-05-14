@@ -9,11 +9,13 @@
 
 using namespace obstacle_detector;
 
-std::vector<std::vector<geometry_msgs::Point>> segs;
-std::vector<double>dist;
+std::vector<std::vector<geometry_msgs::Point>> segs;//contain the line segments less than 2m from origin
+std::vector<double>dist;//contain the distances of each line segmeent(obstacles)
+
 float robot_x = 0.0;
 float robot_y = 0.0;
 
+//Calculate the smallest distance from origin to a line segment AB
 double calc_dist(geometry_msgs::Point A,geometry_msgs::Point B){
    geometry_msgs::Point AB;
    AB.x = B.x - A.x;
@@ -50,13 +52,19 @@ double calc_dist(geometry_msgs::Point A,geometry_msgs::Point B){
         double mod = sqrt(x1 * x1 + y1 * y1);
         reqAns = abs(x1 * y2 - y1 * x2) / mod;
     }
-    //ROS_INFO("A:(%f,%f) B:(%f,%f) Ana:%f",A.x,A.y,B.x,B.y,reqAns);
+
     return reqAns;
 }
 
-std::vector<double>calc_ea_sa(geometry_msgs::Point s,geometry_msgs::Point f){
+//calculate the start and end angle of a line segment
+//the angles are measured from the positive x-axis
+//the angles are in radians (from 0 to PI, 0 to -PI)
+std::vector<double>calc_ea_sa(geometry_msgs::Point f,geometry_msgs::Point s){
    double ea = atan2(s.y,s.x);
    double sa = atan2(f.y,s.x);
+   if(sa>=0 && ea>=0 && sa>ea){
+      swap(sa,ea);
+   }
    return std::vector<double>{ea,sa};
 }
 
@@ -68,7 +76,6 @@ void callback(const obstacle_detector::Obstacles::ConstPtr obs){
       if(t<=2.0){
          segs.push_back(std::vector<geometry_msgs::Point>{obs->segments[i].first_point,obs->segments[i].last_point});
          dist.push_back(t);
-         //ROS_INFO("ENtered %f",t);
       }
    }
 
@@ -81,8 +88,9 @@ int main(int argc, char **argv)
    ros::NodeHandle n("~");
    ros::Subscriber pose_sub = n.subscribe("/raw_obstacles", 1, callback);
    ros::Publisher obstacle_pub = n.advertise<task2::ObstacleInfo>("obstacle_info", 10);
-   ros::Publisher marker_pub = n.advertise<visualization_msgs::Marker>("line_marker", 10);
-   ros::Publisher obs_marker_pub = n.advertise<visualization_msgs::Marker>("obstacle_marker", 10);
+   //the output message will be published in /obstacle_info 
+   ros::Publisher marker_pub = n.advertise<visualization_msgs::Marker>("line_marker", 10);//for visualisation
+   ros::Publisher obs_marker_pub = n.advertise<visualization_msgs::Marker>("obstacle_marker", 10);//for visulalisation
    ros::Rate loop_rate(50);
 
    
@@ -130,6 +138,7 @@ int main(int argc, char **argv)
            
       }
 
+      //prepare the output message
       task2::ObstacleInfo output;
       output.num = segs.size();
       output.distance = dist;
